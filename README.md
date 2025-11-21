@@ -1,69 +1,125 @@
-# AI-Powered JSON Converter Worker
+# AI-Powered JSON Converter
 
-A lightweight, single-file Cloudflare Worker application that uses AI to convert JSON data between different formats. Features a secure web interface with dual-layer authentication.
+[中文文档](./README_CN.md) | English
+
+A lightweight application that uses AI to convert JSON data between different formats. Features a secure web interface with dual-layer authentication.
 
 ## Features
 
-- **AI-Powered Conversion**: Utilizes Cloudflare WorkerAI or custom OpenAI-compatible APIs for intelligent format transformation.
-- **Serverless & Single File**: Entire application (Frontend + Backend) is bundled into a single `worker.js` for easy deployment on Cloudflare Workers.
+- **AI-Powered Conversion**: Utilizes OpenAI-compatible APIs for intelligent format transformation
 - **Dual Authentication**:
-  - **Admin (`KEY`)**: Full access including AI conversion capabilities.
-  - **Guest (`TOKEN`)**: Read-only access to the interface.
-- **Secure**: JWT-based stateless authentication.
+  - **Admin (`KEY`)**: Full access including AI conversion capabilities
+  - **Guest (`TOKEN`)**: Read-only access to the interface
+- **Secure**: JWT-based stateless authentication with 3-day token expiration
 - **User-Friendly UI**:
-  - Split-view for Source and Result.
-  - URL fetching and file upload support.
-  - One-click download of converted files.
+  - Split-view for Source and Result
+  - URL fetching and file upload support
+  - One-click download of converted files
 
-## Deployment
+## Quick Start with Docker
 
-### 1. Prerequisites
-- [Node.js](https://nodejs.org/) installed.
-- [Cloudflare Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed and authenticated.
+### Option 1: Using Docker Hub (Recommended)
 
-### 2. Setup
-Install dependencies:
+Pull and run the pre-built image:
+
 ```bash
-npm install
+docker pull axuitomo/fucktvconfig:latest
+
+docker run -d \
+  -p 8787:8787 \
+  -e KEY=your-admin-password \
+  -e TOKEN=your-guest-password \
+  -e APIURL=https://api.openai.com/v1/chat/completions \
+  -e APIKEY=your-api-key \
+  -e MODEL=gpt-4o-mini \
+  --name json-converter \
+  axuitomo/fucktvconfig:latest
 ```
 
-### 3. Configuration (Secrets)
-Set the necessary secrets using Wrangler:
+Access the application at `http://localhost:8787`
 
-**Required:**
-```bash
-# Admin Password (Full Access)
-npx wrangler secret put KEY
+### Option 2: Using Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+
+services:
+  json-converter:
+    image: axuitomo/fucktvconfig:latest
+    container_name: json-converter
+    ports:
+      - "8787:8787"
+    environment:
+      - KEY=your-admin-password
+      - TOKEN=your-guest-password
+      - APIURL=https://api.openai.com/v1/chat/completions
+      - APIKEY=your-api-key
+      - MODEL=gpt-4o-mini
+    restart: unless-stopped
 ```
 
-**Optional:**
-```bash
-# Guest Password (Read Only)
-npx wrangler secret put TOKEN
+Then run:
 
-# Custom AI Provider (If not using Cloudflare WorkerAI)
-npx wrangler secret put APIURL  # e.g., https://api.openai.com/v1/chat/completions
-npx wrangler secret put APIKEY  # Your API Key
-npx wrangler secret put MODEL   # e.g., gpt-4o-mini
+```bash
+docker-compose up -d
 ```
 
-### 4. Build & Deploy
+### Option 3: Build from Source
+
 ```bash
-npm run deploy
+git clone https://github.com/axuitomo/FUCKTVconfig.git
+cd FUCKTVconfig
+
+# Configure environment variables
+cp .env.example .env
+nano .env  # Edit with your values
+
+# Build and run
+docker-compose up -d --build
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `KEY` | Yes | Admin password for full access |
+| `TOKEN` | No | Guest password for read-only access |
+| `APIURL` | Yes | AI API endpoint (e.g., `https://api.openai.com/v1/chat/completions`) |
+| `APIKEY` | Yes | API key for AI provider |
+| `MODEL` | No | AI model name (default: `gpt-4o-mini`) |
 
 ## Usage
 
-1.  Access your Worker URL.
-2.  Login with your Admin `KEY` or Guest `TOKEN`.
-3.  Paste your source JSON, fetch from a URL, or upload a file.
-4.  Select the target format (e.g., `LunaTV/MoonTV`).
-5.  Click **Start Conversion**.
-6.  Download the result.
+1. Access the application at `http://localhost:8787`
+2. Login with your Admin `KEY` or Guest `TOKEN`
+3. Paste your source JSON, fetch from a URL, or upload a file
+4. Select the target format (e.g., `LunaTV/MoonTV`)
+5. Click **Start Conversion**
+6. Download the result
+
+## Security
+
+- JWT tokens expire after **3 days** - users must re-login for security
+- Passwords are stored as environment variables, never in code
+- Admin-only access to AI conversion features
+
+## Resources
+
+- **Docker Hub**: [axuitomo/fucktvconfig](https://hub.docker.com/r/axuitomo/fucktvconfig)
+- **GitHub**: [axuitomo/FUCKTVconfig](https://github.com/axuitomo/FUCKTVconfig)
+- **Debugging Guide**: [DOCKER_DEBUG.md](./DOCKER_DEBUG.md)
 
 ## Tech Stack
--   **Runtime**: Cloudflare Workers
--   **Language**: JavaScript (ES6+)
--   **Bundler**: esbuild
--   **Auth**: jose (JWT)
--   **Frontend**: Vanilla JS + CSS (Embedded)
+
+- **Runtime**: Node.js + Wrangler Dev Server
+- **Language**: JavaScript (ES6+)
+- **Bundler**: esbuild
+- **Auth**: jose (JWT)
+- **Frontend**: Vanilla JS + CSS (Embedded)
+- **Container**: Docker
+
+## License
+
+ISC

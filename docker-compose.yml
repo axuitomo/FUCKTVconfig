@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  json-converter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: json-converter
+    ports:
+      - "8787:8787"
+    environment:
+      # Admin password (required)
+      - KEY=${KEY:-your-admin-password-here}
+      # Guest password (optional)
+      - TOKEN=${TOKEN:-your-guest-password-here}
+      # Custom AI API configuration (required for Docker deployment)
+      - APIURL=${APIURL}
+      - APIKEY=${APIKEY}
+      - MODEL=${MODEL:-gpt-4o-mini}
+    volumes:
+      # Mount source code for development (hot reload)
+      - ./src:/app/src:ro
+      - ./worker.js:/app/worker.js:ro
+    restart: unless-stopped
+    networks:
+      - json-converter-network
+
+networks:
+  json-converter-network:
+    driver: bridge

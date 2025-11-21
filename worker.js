@@ -1399,9 +1399,14 @@ var html = `
 
     <div class="footer" id="footer" style="display: none;">
         <span id="status-message">\u51C6\u5907\u5C31\u7EEA</span>
-        <button id="convert-btn" style="width: auto; padding: 0.75rem 2rem;">
-            <span class="spinner"></span>\u5F00\u59CB\u8F6C\u6362
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+            <button id="test-api-btn" style="width: auto; padding: 0.75rem 1.5rem; background-color: #64748b;">
+                <span class="spinner"></span>\u6D4B\u8BD5 API
+            </button>
+            <button id="convert-btn" style="width: auto; padding: 0.75rem 2rem;">
+                <span class="spinner"></span>\u5F00\u59CB\u8F6C\u6362
+            </button>
+        </div>
     </div>
 
     <script>
@@ -1423,6 +1428,7 @@ var html = `
         const fileUpload = document.getElementById('file-upload');
         const formatSelect = document.getElementById('format-select');
         const convertBtn = document.getElementById('convert-btn');
+        const testApiBtn = document.getElementById('test-api-btn');
         const statusMsg = document.getElementById('status-message');
         const downloadBtn = document.getElementById('download-btn');
         const filenameInput = document.getElementById('filename-input');
@@ -1560,6 +1566,44 @@ var html = `
             }
         });
 
+        // Test API
+        testApiBtn.addEventListener('click', async () => {
+            testApiBtn.disabled = true;
+            testApiBtn.classList.add('loading');
+            statusMsg.textContent = '\u6B63\u5728\u6D4B\u8BD5 API \u914D\u7F6E...';
+
+            try {
+                const res = await fetch(API_BASE + '/api/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + jwt
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        statusMsg.textContent = '\u2705 API \u6D4B\u8BD5\u6210\u529F!';
+                        alert('API \u6D4B\u8BD5\u6210\u529F!\\n\\n\u914D\u7F6E\u4FE1\u606F:\\n' + JSON.stringify(data.config, null, 2) + '\\n\\nAI \u54CD\u5E94:\\n' + data.response);
+                    } else {
+                        statusMsg.textContent = '\u274C API \u6D4B\u8BD5\u5931\u8D25';
+                        alert('API \u6D4B\u8BD5\u5931\u8D25\\n\\n\u9519\u8BEF: ' + data.error + '\\n\\n\u8BE6\u60C5:\\n' + (data.details || 'N/A'));
+                    }
+                } else {
+                    const err = await res.json();
+                    statusMsg.textContent = '\u274C \u6D4B\u8BD5\u8BF7\u6C42\u5931\u8D25';
+                    alert('\u6D4B\u8BD5\u5931\u8D25: ' + (err.error || res.statusText));
+                }
+            } catch (e) {
+                statusMsg.textContent = '\u274C \u6D4B\u8BD5\u51FA\u9519';
+                alert('\u6D4B\u8BD5\u51FA\u9519: ' + e.message);
+            } finally {
+                testApiBtn.disabled = false;
+                testApiBtn.classList.remove('loading');
+            }
+        });
+
         // Download
         downloadBtn.addEventListener('click', () => {
             const content = outputJson.value;
@@ -1622,6 +1666,9 @@ var src_default = {
     if (url.pathname === "/api/status" && request.method === "GET") {
       return handleStatus(request, env, corsHeaders);
     }
+    if (url.pathname === "/api/test" && request.method === "POST") {
+      return handleTestAPI(request, env, corsHeaders);
+    }
     if (url.pathname === "/favicon.ico" && request.method === "GET") {
       return new Response(null, { status: 204 });
     }
@@ -1644,7 +1691,7 @@ async function handleAuth(request, env, corsHeaders) {
       });
     }
     const secret = new TextEncoder().encode(env.KEY);
-    const token = await new SignJWT({ role }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("24h").sign(secret);
+    const token = await new SignJWT({ role }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("72h").sign(secret);
     return new Response(JSON.stringify({ token, role }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
@@ -1725,7 +1772,19 @@ Please start the conversion and return the JSON object directly.
           messages: [{ role: "user", content: prompt }]
         })
       });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
+      }
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
+      }
       const data = await response.json();
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error("Unexpected API response format: " + JSON.stringify(data));
+      }
       resultJsonStr = data.choices[0].message.content;
     } else {
       if (!env.AI) {
@@ -1744,6 +1803,116 @@ Please start the conversion and return the JSON object directly.
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleTestAPI(request, env, corsHeaders) {
+  const user = await verifyAuth(request, env);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  if (user.role !== "admin") {
+    return new Response(JSON.stringify({ error: "Guest users cannot test API" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  try {
+    const testPrompt = 'Say "API test successful" in JSON format with a field called "message".';
+    if (env.APIURL) {
+      const response = await fetch(env.APIURL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${env.APIKEY}`
+        },
+        body: JSON.stringify({
+          model: env.MODEL,
+          messages: [{ role: "user", content: testPrompt }]
+        })
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        return new Response(JSON.stringify({
+          success: false,
+          error: `API returned status ${response.status}`,
+          details: text.substring(0, 500)
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        return new Response(JSON.stringify({
+          success: false,
+          error: `API returned non-JSON content type: ${contentType}`,
+          details: text.substring(0, 500)
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const data = await response.json();
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "Unexpected API response format",
+          details: JSON.stringify(data)
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        message: "API test successful",
+        response: data.choices[0].message.content,
+        config: {
+          url: env.APIURL,
+          model: env.MODEL,
+          hasApiKey: !!env.APIKEY
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    } else {
+      if (!env.AI) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: "WorkerAI binding (AI) not found and no custom APIURL provided."
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+      const response = await env.AI.run(env.MODEL || "@cf/meta/llama-3-8b-instruct", {
+        prompt: testPrompt
+      });
+      return new Response(JSON.stringify({
+        success: true,
+        message: "WorkerAI test successful",
+        response: response.response,
+        config: {
+          provider: "WorkerAI",
+          model: env.MODEL || "@cf/meta/llama-3-8b-instruct"
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+  } catch (e) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: e.message,
+      stack: e.stack
+    }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }

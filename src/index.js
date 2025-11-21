@@ -56,6 +56,10 @@ export default {
             return handleStatus(request, env, corsHeaders);
         }
 
+        if (url.pathname === '/api/test' && request.method === 'POST') {
+            return handleTestAPI(request, env, corsHeaders);
+        }
+
         if (url.pathname === '/favicon.ico' && request.method === 'GET') {
             return new Response(null, { status: 204 });
         }
@@ -85,7 +89,7 @@ async function handleAuth(request, env, corsHeaders) {
         const secret = new TextEncoder().encode(env.KEY); // Use KEY as JWT secret
         const token = await new SignJWT({ role })
             .setProtectedHeader({ alg: 'HS256' })
-            .setExpirationTime('24h')
+            .setExpirationTime('72h') // 3 days for security - users must re-login after 3 days
             .sign(secret);
 
         return new Response(JSON.stringify({ token, role }), {
@@ -179,8 +183,23 @@ Please start the conversion and return the JSON object directly.
                     messages: [{ role: "user", content: prompt }]
                 })
             });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
+            }
+
             const data = await response.json();
             // Assuming standard OpenAI format
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                throw new Error('Unexpected API response format: ' + JSON.stringify(data));
+            }
             resultJsonStr = data.choices[0].message.content;
         } else {
             // Cloudflare WorkerAI
@@ -212,3 +231,129 @@ Please start the conversion and return the JSON object directly.
         });
     }
 }
+
+async function handleTestAPI(request, env, corsHeaders) {
+    const user = await verifyAuth(request, env);
+    if (!user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+
+    if (user.role !== 'admin') {
+        return new Response(JSON.stringify({ error: 'Guest users cannot test API' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+
+    try {
+        const testPrompt = 'Say "API test successful" in JSON format with a field called "message".';
+
+        if (env.APIURL) {
+            // Test Custom AI Provider
+            const response = await fetch(env.APIURL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${env.APIKEY}`
+                },
+                body: JSON.stringify({
+                    model: env.MODEL,
+                    messages: [{ role: "user", content: testPrompt }]
+                })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: `API returned status ${response.status}`,
+                    details: text.substring(0, 500)
+                }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: `API returned non-JSON content type: ${contentType}`,
+                    details: text.substring(0, 500)
+                }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            const data = await response.json();
+
+            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'Unexpected API response format',
+                    details: JSON.stringify(data)
+                }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'API test successful',
+                response: data.choices[0].message.content,
+                config: {
+                    url: env.APIURL,
+                    model: env.MODEL,
+                    hasApiKey: !!env.APIKEY
+                }
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+
+        } else {
+            // Test Cloudflare WorkerAI
+            if (!env.AI) {
+                return new Response(JSON.stringify({
+                    success: false,
+                    error: 'WorkerAI binding (AI) not found and no custom APIURL provided.'
+                }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+            }
+
+            const response = await env.AI.run(env.MODEL || '@cf/meta/llama-3-8b-instruct', {
+                prompt: testPrompt
+            });
+
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'WorkerAI test successful',
+                response: response.response,
+                config: {
+                    provider: 'WorkerAI',
+                    model: env.MODEL || '@cf/meta/llama-3-8b-instruct'
+                }
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
+    } catch (e) {
+        return new Response(JSON.stringify({
+            success: false,
+            error: e.message,
+            stack: e.stack
+        }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+    }
+}
+

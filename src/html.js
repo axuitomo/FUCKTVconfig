@@ -170,9 +170,14 @@ export const html = `
 
     <div class="footer" id="footer" style="display: none;">
         <span id="status-message">准备就绪</span>
-        <button id="convert-btn" style="width: auto; padding: 0.75rem 2rem;">
-            <span class="spinner"></span>开始转换
-        </button>
+        <div style="display: flex; gap: 0.5rem;">
+            <button id="test-api-btn" style="width: auto; padding: 0.75rem 1.5rem; background-color: #64748b;">
+                <span class="spinner"></span>测试 API
+            </button>
+            <button id="convert-btn" style="width: auto; padding: 0.75rem 2rem;">
+                <span class="spinner"></span>开始转换
+            </button>
+        </div>
     </div>
 
     <script>
@@ -194,6 +199,7 @@ export const html = `
         const fileUpload = document.getElementById('file-upload');
         const formatSelect = document.getElementById('format-select');
         const convertBtn = document.getElementById('convert-btn');
+        const testApiBtn = document.getElementById('test-api-btn');
         const statusMsg = document.getElementById('status-message');
         const downloadBtn = document.getElementById('download-btn');
         const filenameInput = document.getElementById('filename-input');
@@ -328,6 +334,44 @@ export const html = `
             } finally {
                 convertBtn.disabled = false;
                 convertBtn.classList.remove('loading');
+            }
+        });
+
+        // Test API
+        testApiBtn.addEventListener('click', async () => {
+            testApiBtn.disabled = true;
+            testApiBtn.classList.add('loading');
+            statusMsg.textContent = '正在测试 API 配置...';
+
+            try {
+                const res = await fetch(API_BASE + '/api/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + jwt
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        statusMsg.textContent = '✅ API 测试成功!';
+                        alert('API 测试成功!\\n\\n配置信息:\\n' + JSON.stringify(data.config, null, 2) + '\\n\\nAI 响应:\\n' + data.response);
+                    } else {
+                        statusMsg.textContent = '❌ API 测试失败';
+                        alert('API 测试失败\\n\\n错误: ' + data.error + '\\n\\n详情:\\n' + (data.details || 'N/A'));
+                    }
+                } else {
+                    const err = await res.json();
+                    statusMsg.textContent = '❌ 测试请求失败';
+                    alert('测试失败: ' + (err.error || res.statusText));
+                }
+            } catch (e) {
+                statusMsg.textContent = '❌ 测试出错';
+                alert('测试出错: ' + e.message);
+            } finally {
+                testApiBtn.disabled = false;
+                testApiBtn.classList.remove('loading');
             }
         });
 
