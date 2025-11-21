@@ -29,15 +29,16 @@ COPY package*.json ./
 RUN npm install --production && \
     npm install -g wrangler
 
-# Copy built worker and source files
+# Copy built worker, source files, and wrangler config
 COPY --from=builder /app/worker.js ./
 COPY --from=builder /app/src ./src
+COPY wrangler.toml ./
 
 # Expose Wrangler dev server port
 EXPOSE 8787
 
 # Set environment variables
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 
-# Start Wrangler dev server
-CMD ["wrangler", "dev", "--ip", "0.0.0.0", "--port", "8787"]
+# Start Wrangler dev server in non-interactive mode
+CMD ["npx", "wrangler", "dev", "--ip", "0.0.0.0", "--port", "8787", "--local"]
