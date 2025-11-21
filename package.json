@@ -1,0 +1,20 @@
+{
+  "name": "my-json-converter",
+  "version": "1.0.0",
+  "description": "AI-Powered JSON Converter Worker",
+  "main": "worker.js",
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --outfile=worker.js --format=esm --target=es2020",
+    "deploy": "npm run build && npx wrangler deploy worker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jose": "^5.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.11",
+    "wrangler": "^3.22.0"
+  }
+}
