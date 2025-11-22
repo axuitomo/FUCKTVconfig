@@ -155,51 +155,41 @@ ${sourceJson}
 Please start the conversion and return the JSON object directly.
         `;
 
-        let resultJsonStr = '';
-
-        if (env.APIURL) {
-            // Custom AI Provider
-            const response = await fetch(env.APIURL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${env.APIKEY}`
-                },
-                body: JSON.stringify({
-                    model: env.MODEL,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-
-            if (!response.ok) {
-                const text = await response.text();
-                throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
-            }
-
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                const text = await response.text();
-                throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
-            }
-
-            const data = await response.json();
-            // Assuming standard OpenAI format
-            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-                throw new Error('Unexpected API response format: ' + JSON.stringify(data));
-            }
-            resultJsonStr = data.choices[0].message.content;
-        } else {
-            // Cloudflare WorkerAI
-            if (!env.AI) {
-                throw new Error('No AI provider configured. Please set APIURL and APIKEY environment variables. WorkerAI is only available in Cloudflare Workers environment.');
-            }
-            const response = await env.AI.run(env.MODEL || '@cf/meta/llama-3-8b-instruct', {
-                prompt: prompt
-            });
-            // WorkerAI response format varies, usually { response: "..." } or stream
-            // For text generation models it is usually { response: "string" }
-            resultJsonStr = response.response;
+        // Require APIURL and APIKEY
+        if (!env.APIURL || !env.APIKEY) {
+            throw new Error('AI provider not configured. Please set APIURL and APIKEY environment variables.');
         }
+
+        // Call OpenAI-compatible API
+        const response = await fetch(env.APIURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${env.APIKEY}`
+            },
+            body: JSON.stringify({
+                model: env.MODEL || 'gpt-4o-mini',
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
+        }
+
+        const data = await response.json();
+        // Assuming standard OpenAI format
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            throw new Error('Unexpected API response format: ' + JSON.stringify(data));
+        }
+        const resultJsonStr = data.choices[0].message.content;
 
         // Clean up result (remove markdown code blocks if AI added them)
         resultJsonStr = resultJsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -297,30 +287,13 @@ async function handleTestAPI(request, env, corsHeaders) {
             });
 
         } else {
-            // Test Cloudflare WorkerAI
-            if (!env.AI) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: 'WorkerAI binding (AI) not found and no custom APIURL provided.'
-                }), {
-                    status: 200,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                });
-            }
-
-            const response = await env.AI.run(env.MODEL || '@cf/meta/llama-3-8b-instruct', {
-                prompt: testPrompt
-            });
-
+            // No APIURL configured
             return new Response(JSON.stringify({
-                success: true,
-                message: 'WorkerAI test successful',
-                response: response.response,
-                config: {
-                    provider: 'WorkerAI',
-                    model: env.MODEL || '@cf/meta/llama-3-8b-instruct'
-                }
+                success: false,
+                error: 'AI provider not configured',
+                details: 'Please set APIURL and APIKEY environment variables.'
             }), {
+                status: 200,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
         }
