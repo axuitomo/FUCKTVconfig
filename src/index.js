@@ -191,7 +191,7 @@ Please start the conversion and return the JSON object directly.
         } else {
             // Cloudflare WorkerAI
             if (!env.AI) {
-                throw new Error('WorkerAI binding (AI) not found and no custom APIURL provided.');
+                throw new Error('No AI provider configured. Please set APIURL and APIKEY environment variables. WorkerAI is only available in Cloudflare Workers environment.');
             }
             const response = await env.AI.run(env.MODEL || '@cf/meta/llama-3-8b-instruct', {
                 prompt: prompt
