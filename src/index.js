@@ -189,7 +189,7 @@ Please start the conversion and return the JSON object directly.
         if (!data.choices || !data.choices[0] || !data.choices[0].message) {
             throw new Error('Unexpected API response format: ' + JSON.stringify(data));
         }
-        const resultJsonStr = data.choices[0].message.content;
+        let resultJsonStr = data.choices[0].message.content;
 
         // Clean up result (remove markdown code blocks if AI added them)
         resultJsonStr = resultJsonStr.replace(/```json/g, '').replace(/```/g, '').trim();

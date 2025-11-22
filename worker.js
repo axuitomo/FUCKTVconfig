@@ -1748,42 +1748,34 @@ ${sourceJson}
 
 Please start the conversion and return the JSON object directly.
         `;
-    let resultJsonStr = "";
-    if (env.APIURL) {
-      const response = await fetch(env.APIURL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${env.APIKEY}`
-        },
-        body: JSON.stringify({
-          model: env.MODEL,
-          messages: [{ role: "user", content: prompt }]
-        })
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
-      }
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
-      }
-      const data = await response.json();
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error("Unexpected API response format: " + JSON.stringify(data));
-      }
-      resultJsonStr = data.choices[0].message.content;
-    } else {
-      if (!env.AI) {
-        throw new Error("No AI provider configured. Please set APIURL and APIKEY environment variables. WorkerAI is only available in Cloudflare Workers environment.");
-      }
-      const response = await env.AI.run(env.MODEL || "@cf/meta/llama-3-8b-instruct", {
-        prompt
-      });
-      resultJsonStr = response.response;
+    if (!env.APIURL || !env.APIKEY) {
+      throw new Error("AI provider not configured. Please set APIURL and APIKEY environment variables.");
     }
+    const response = await fetch(env.APIURL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${env.APIKEY}`
+      },
+      body: JSON.stringify({
+        model: env.MODEL || "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }]
+      })
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
+    }
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await response.text();
+      throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
+    }
+    const data = await response.json();
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Unexpected API response format: " + JSON.stringify(data));
+    }
+    let resultJsonStr = data.choices[0].message.content;
     resultJsonStr = resultJsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
     const resultJson = JSON.parse(resultJsonStr);
     return new Response(JSON.stringify(resultJson), {
@@ -1865,27 +1857,12 @@ async function handleTestAPI(request, env, corsHeaders) {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     } else {
-      if (!env.AI) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "WorkerAI binding (AI) not found and no custom APIURL provided."
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-      const response = await env.AI.run(env.MODEL || "@cf/meta/llama-3-8b-instruct", {
-        prompt: testPrompt
-      });
       return new Response(JSON.stringify({
-        success: true,
-        message: "WorkerAI test successful",
-        response: response.response,
-        config: {
-          provider: "WorkerAI",
-          model: env.MODEL || "@cf/meta/llama-3-8b-instruct"
-        }
+        success: false,
+        error: "AI provider not configured",
+        details: "Please set APIURL and APIKEY environment variables."
       }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
