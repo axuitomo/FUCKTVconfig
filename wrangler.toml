@@ -1,8 +1,3 @@
 name = "fucktvconfig"
 main = "worker.js"
 compatibility_date = "2023-12-01"
-
-[ai]
-binding = "AI"
-remote = true
-# binding_model = "@cf/meta/llama-3-8b-instruct" # Optional: Specify a model

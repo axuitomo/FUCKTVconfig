@@ -14,7 +14,7 @@ services:
       # Custom AI API configuration (required for Docker deployment)
       - APIURL=${APIURL:-}
       - APIKEY=${APIKEY:-}
-      - MODEL=${MODEL:-@cf/meta/llama-3-8b-instruct}
+      - MODEL=${MODEL:-gpt-4o-mini}
     volumes:
       # Mount source code for development (hot reload)
       - ./src:/app/src:ro
