@@ -6,7 +6,7 @@
 set -e
 
 # 配置
-IMAGE_NAME="json-converter"
+IMAGE_NAME="fucktvconfig"
 REGISTRY="docker.io"  # 默认使用 Docker Hub，可改为其他仓库
 USERNAME="${DOCKER_USERNAME:-your-dockerhub-username}"  # 从环境变量读取或使用默认值
 VERSION="${1:-latest}"  # 从参数读取版本号，默认为 latest

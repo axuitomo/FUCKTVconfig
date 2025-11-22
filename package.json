@@ -1,5 +1,5 @@
 {
-  "name": "my-json-converter",
+  "name": "fucktvconfig",
   "version": "1.0.0",
   "description": "AI-Powered JSON Converter Worker",
   "main": "worker.js",

@@ -1,30 +1,28 @@
 version: '3.8'
 
 services:
-  json-converter:
+  fucktvconfig:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: json-converter
+    container_name: fucktvconfig
     ports:
       - "8787:8787"
     environment:
       # Admin password (required)
       - KEY=${KEY:-your-admin-password-here}
-      # Guest password (optional)
-      - TOKEN=${TOKEN:-your-guest-password-here}
       # Custom AI API configuration (required for Docker deployment)
-      - APIURL=${APIURL}
-      - APIKEY=${APIKEY}
-      - MODEL=${MODEL:-gpt-4o-mini}
+      - APIURL=${APIURL:-}
+      - APIKEY=${APIKEY:-}
+      - MODEL=${MODEL:-@cf/meta/llama-3-8b-instruct}
     volumes:
       # Mount source code for development (hot reload)
       - ./src:/app/src:ro
       - ./worker.js:/app/worker.js:ro
     restart: unless-stopped
     networks:
-      - json-converter-network
+      - fucktvconfig-network
 
 networks:
-  json-converter-network:
+  fucktvconfig-network:
     driver: bridge

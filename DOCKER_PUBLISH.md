@@ -24,38 +24,38 @@ docker login
 
 ```bash
 # 构建镜像并打标签
-docker build -t your-username/json-converter:latest .
+docker build -t your-username/fucktvconfig:latest .
 
 # 构建特定版本
-docker build -t your-username/json-converter:1.0.0 .
+docker build -t your-username/fucktvconfig:1.0.0 .
 ```
 
 ### 3. 推送镜像
 
 ```bash
 # 推送 latest 版本
-docker push your-username/json-converter:latest
+docker push your-username/fucktvconfig:latest
 
 # 推送特定版本
-docker push your-username/json-converter:1.0.0
+docker push your-username/fucktvconfig:1.0.0
 ```
 
 ### 4. 同时推送多个标签
 
 ```bash
 # 构建镜像
-docker build -t your-username/json-converter:1.0.0 .
+docker build -t your-username/fucktvconfig:1.0.0 .
 
 # 打上多个标签
-docker tag your-username/json-converter:1.0.0 your-username/json-converter:latest
-docker tag your-username/json-converter:1.0.0 your-username/json-converter:1.0
-docker tag your-username/json-converter:1.0.0 your-username/json-converter:1
+docker tag your-username/fucktvconfig:1.0.0 your-username/fucktvconfig:latest
+docker tag your-username/fucktvconfig:1.0.0 your-username/fucktvconfig:1.0
+docker tag your-username/fucktvconfig:1.0.0 your-username/fucktvconfig:1
 
 # 推送所有标签
-docker push your-username/json-converter:1.0.0
-docker push your-username/json-converter:latest
-docker push your-username/json-converter:1.0
-docker push your-username/json-converter:1
+docker push your-username/fucktvconfig:1.0.0
+docker push your-username/fucktvconfig:latest
+docker push your-username/fucktvconfig:1.0
+docker push your-username/fucktvconfig:1
 ```
 
 ---
@@ -124,10 +124,10 @@ git tag v1.0.0
 git push origin v1.0.0
 
 # GitHub Actions 会自动构建并推送以下标签：
-# - your-username/json-converter:1.0.0
-# - your-username/json-converter:1.0
-# - your-username/json-converter:1
-# - your-username/json-converter:latest
+# - your-username/fucktvconfig:1.0.0
+# - your-username/fucktvconfig:1.0
+# - your-username/fucktvconfig:1
+# - your-username/fucktvconfig:latest
 ```
 
 ### 多平台支持
@@ -144,8 +144,8 @@ GitHub Actions 工作流支持构建多平台镜像：
 
 ```bash
 docker login
-docker build -t your-username/json-converter:latest .
-docker push your-username/json-converter:latest
+docker build -t your-username/fucktvconfig:latest .
+docker push your-username/fucktvconfig:latest
 ```
 
 ### GitHub Container Registry (ghcr.io)
@@ -155,8 +155,8 @@ docker push your-username/json-converter:latest
 echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 
 # 构建并推送
-docker build -t ghcr.io/your-username/json-converter:latest .
-docker push ghcr.io/your-username/json-converter:latest
+docker build -t ghcr.io/your-username/fucktvconfig:latest .
+docker push ghcr.io/your-username/fucktvconfig:latest
 ```
 
 ### 阿里云容器镜像服务
@@ -166,8 +166,8 @@ docker push ghcr.io/your-username/json-converter:latest
 docker login --username=your-aliyun-username registry.cn-hangzhou.aliyuncs.com
 
 # 构建并推送
-docker build -t registry.cn-hangzhou.aliyuncs.com/your-namespace/json-converter:latest .
-docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/json-converter:latest
+docker build -t registry.cn-hangzhou.aliyuncs.com/your-namespace/fucktvconfig:latest .
+docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/fucktvconfig:latest
 ```
 
 ### 腾讯云容器镜像服务
@@ -177,8 +177,8 @@ docker push registry.cn-hangzhou.aliyuncs.com/your-namespace/json-converter:late
 docker login ccr.ccs.tencentyun.com --username=your-tencent-username
 
 # 构建并推送
-docker build -t ccr.ccs.tencentyun.com/your-namespace/json-converter:latest .
-docker push ccr.ccs.tencentyun.com/your-namespace/json-converter:latest
+docker build -t ccr.ccs.tencentyun.com/your-namespace/fucktvconfig:latest .
+docker push ccr.ccs.tencentyun.com/your-namespace/fucktvconfig:latest
 ```
 
 ### 私有镜像仓库
@@ -188,8 +188,8 @@ docker push ccr.ccs.tencentyun.com/your-namespace/json-converter:latest
 docker login your-registry.com
 
 # 构建并推送
-docker build -t your-registry.com/json-converter:latest .
-docker push your-registry.com/json-converter:latest
+docker build -t your-registry.com/fucktvconfig:latest .
+docker push your-registry.com/fucktvconfig:latest
 ```
 
 ---
@@ -211,13 +211,13 @@ docker tag image:1.2.3 image:latest
 
 ```bash
 # 使用 BuildKit 加速构建
-DOCKER_BUILDKIT=1 docker build -t json-converter:latest .
+DOCKER_BUILDKIT=1 docker build -t fucktvconfig:latest .
 
 # 使用缓存
-docker build --cache-from json-converter:latest -t json-converter:latest .
+docker build --cache-from fucktvconfig:latest -t fucktvconfig:latest .
 
 # 多平台构建
-docker buildx build --platform linux/amd64,linux/arm64 -t json-converter:latest .
+docker buildx build --platform linux/amd64,linux/arm64 -t fucktvconfig:latest .
 ```
 
 ### 3. 镜像大小优化
@@ -230,7 +230,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t json-converter:latest 
 
 - 使用访问令牌而非密码登录
 - 定期更新基础镜像
-- 扫描镜像漏洞：`docker scan json-converter:latest`
+- 扫描镜像漏洞：`docker scan fucktvconfig:latest`
 - 不要在镜像中包含敏感信息
 
 ---
@@ -241,10 +241,10 @@ docker buildx build --platform linux/amd64,linux/arm64 -t json-converter:latest 
 
 ```bash
 # 拉取最新版本
-docker pull your-username/json-converter:latest
+docker pull your-username/fucktvconfig:latest
 
 # 拉取特定版本
-docker pull your-username/json-converter:1.0.0
+docker pull your-username/fucktvconfig:1.0.0
 ```
 
 ### 运行容器
@@ -253,12 +253,11 @@ docker pull your-username/json-converter:1.0.0
 docker run -d \
   -p 8787:8787 \
   -e KEY=your-admin-password \
-  -e TOKEN=your-guest-password \
   -e APIURL=https://api.openai.com/v1/chat/completions \
   -e APIKEY=your-api-key \
   -e MODEL=gpt-4o-mini \
-  --name json-converter \
-  your-username/json-converter:latest
+  --name fucktvconfig \
+  your-username/fucktvconfig:latest
 ```
 
 ### 使用 docker-compose
@@ -267,14 +266,13 @@ docker run -d \
 
 ```yaml
 services:
-  json-converter:
-    image: your-username/json-converter:latest  # 使用已发布的镜像
+  fucktvconfig:
+    image: your-username/fucktvconfig:latest  # 使用已发布的镜像
     # 移除 build 配置
     ports:
       - "8787:8787"
     environment:
       - KEY=${KEY}
-      - TOKEN=${TOKEN}
       - APIURL=${APIURL}
       - APIKEY=${APIKEY}
       - MODEL=${MODEL:-gpt-4o-mini}
@@ -310,10 +308,10 @@ export DOCKER_BUILDKIT=1
 
 ```bash
 # 查看镜像层
-docker history json-converter:latest
+docker history fucktvconfig:latest
 
 # 分析镜像大小
-docker images json-converter:latest
+docker images fucktvconfig:latest
 ```
 
 ---

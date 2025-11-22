@@ -28,9 +28,6 @@ notepad .env
 # 管理员密码 - 必填
 KEY=your-secure-admin-password
 
-# 访客密码 - 可选
-TOKEN=your-guest-password
-
 # AI API 配置 - Docker 部署必填
 APIURL=https://api.openai.com/v1/chat/completions
 APIKEY=sk-your-api-key-here
@@ -64,10 +61,10 @@ http://localhost:8787
 docker-compose logs -f
 
 # 查看特定服务的日志
-docker-compose logs -f json-converter
+docker-compose logs -f fucktvconfig
 
 # 查看最近 100 行日志
-docker-compose logs --tail=100 json-converter
+docker-compose logs --tail=100 fucktvconfig
 ```
 
 ### 容器管理
@@ -93,11 +90,11 @@ docker-compose down -v
 
 ```powershell
 # 进入运行中的容器
-docker-compose exec json-converter sh
+docker-compose exec fucktvconfig sh
 
 # 在容器内执行命令
-docker-compose exec json-converter npm --version
-docker-compose exec json-converter wrangler --version
+docker-compose exec fucktvconfig npm --version
+docker-compose exec fucktvconfig wrangler --version
 ```
 
 ### 重新构建
@@ -125,7 +122,7 @@ docker-compose up --build --force-recreate
 
 ```powershell
 # 查看容器中的环境变量
-docker-compose exec json-converter env | grep -E "KEY|TOKEN|API"
+docker-compose exec fucktvconfig env | grep -E "KEY|API"
 ```
 
 ### 3. 端口冲突
@@ -141,10 +138,10 @@ ports:
 
 ```powershell
 # 查看容器网络信息
-docker network inspect fucktvconfig_json-converter-network
+docker network inspect fucktvconfig_fucktvconfig-network
 
 # 查看容器 IP
-docker-compose exec json-converter hostname -i
+docker-compose exec fucktvconfig hostname -i
 ```
 
 ## 📊 性能监控
@@ -153,7 +150,7 @@ docker-compose exec json-converter hostname -i
 
 ```powershell
 # 查看容器资源使用
-docker stats json-converter
+docker stats fucktvconfig
 
 # 查看所有容器
 docker stats
@@ -163,7 +160,7 @@ docker stats
 
 ```powershell
 # 查看容器配置
-docker inspect json-converter
+docker inspect fucktvconfig
 
 # 查看容器进程
 docker-compose top
@@ -175,7 +172,7 @@ docker-compose top
 
 **检查日志**:
 ```powershell
-docker-compose logs json-converter
+docker-compose logs fucktvconfig
 ```
 
 **可能原因**:
@@ -187,7 +184,7 @@ docker-compose logs json-converter
 
 **检查环境变量**:
 ```powershell
-docker-compose exec json-converter env | grep API
+docker-compose exec fucktvconfig env | grep API
 ```
 
 **验证 API 配置**:
@@ -264,7 +261,7 @@ curl http://localhost:8787/
 
 4. **查看日志**
    ```powershell
-   docker-compose logs -f json-converter
+   docker-compose logs -f fucktvconfig
    ```
 
 5. **提交前清理**
@@ -293,7 +290,7 @@ curl http://localhost:8787/
 
 1. **不要在生产环境使用默认密码**
 2. **保护 `.env` 文件** - 确保它在 `.gitignore` 中
-3. **使用强密码** - 为 `KEY` 和 `TOKEN` 设置复杂密码
+3. **使用强密码** - 为 `KEY` 设置复杂密码
 4. **定期更新依赖** - 运行 `npm audit` 检查安全漏洞
 
 ## 📚 相关文档
@@ -309,7 +306,7 @@ curl http://localhost:8787/
 如果遇到问题:
 
 1. 检查日志: `docker-compose logs -f`
-2. 验证环境变量: `docker-compose exec json-converter env`
+2. 验证环境变量: `docker-compose exec fucktvconfig env`
 3. 重新构建: `docker-compose up --build --force-recreate`
 4. 查看 Docker Desktop 的 Containers 面板
 

@@ -5,7 +5,7 @@ param(
     [string]$Version = "latest",
     [string]$Username = $env:DOCKER_USERNAME,
     [string]$Registry = "docker.io",
-    [string]$ImageName = "json-converter"
+    [string]$ImageName = "fucktvconfig"
 )
 
 # 检查 Username

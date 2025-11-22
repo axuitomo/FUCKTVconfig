@@ -7,9 +7,8 @@ A lightweight application that uses AI to convert JSON data between different fo
 ## Features
 
 - **AI-Powered Conversion**: Utilizes OpenAI-compatible APIs for intelligent format transformation
-- **Dual Authentication**:
+- **Secure Authentication**:
   - **Admin (`KEY`)**: Full access including AI conversion capabilities
-  - **Guest (`TOKEN`)**: Read-only access to the interface
 - **Secure**: JWT-based stateless authentication with 3-day token expiration
 - **User-Friendly UI**:
   - Split-view for Source and Result
@@ -28,11 +27,10 @@ docker pull axuitomo/fucktvconfig:latest
 docker run -d \
   -p 8787:8787 \
   -e KEY=your-admin-password \
-  -e TOKEN=your-guest-password \
   -e APIURL=https://api.openai.com/v1/chat/completions \
   -e APIKEY=your-api-key \
   -e MODEL=gpt-4o-mini \
-  --name json-converter \
+  --name fucktvconfig \
   axuitomo/fucktvconfig:latest
 ```
 
@@ -46,14 +44,13 @@ Create a `docker-compose.yml` file:
 version: '3.8'
 
 services:
-  json-converter:
+  fucktvconfig:
     image: axuitomo/fucktvconfig:latest
-    container_name: json-converter
+    container_name: fucktvconfig
     ports:
       - "8787:8787"
     environment:
       - KEY=your-admin-password
-      - TOKEN=your-guest-password
       - APIURL=https://api.openai.com/v1/chat/completions
       - APIKEY=your-api-key
       - MODEL=gpt-4o-mini
@@ -85,7 +82,6 @@ docker-compose up -d --build
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `KEY` | Yes | Admin password for full access |
-| `TOKEN` | No | Guest password for read-only access |
 | `APIURL` | Yes | AI API endpoint (e.g., `https://api.openai.com/v1/chat/completions`) |
 | `APIKEY` | Yes | API key for AI provider |
 | `MODEL` | No | AI model name (default: `gpt-4o-mini`) |
@@ -93,7 +89,7 @@ docker-compose up -d --build
 ## Usage
 
 1. Access the application at `http://localhost:8787`
-2. Login with your Admin `KEY` or Guest `TOKEN`
+2. Login with your Admin `KEY`
 3. Paste your source JSON, fetch from a URL, or upload a file
 4. Select the target format (e.g., `LunaTV/MoonTV`)
 5. Click **Start Conversion**
@@ -104,6 +100,91 @@ docker-compose up -d --build
 - JWT tokens expire after **3 days** - users must re-login for security
 - Passwords are stored as environment variables, never in code
 - Admin-only access to AI conversion features
+
+## Troubleshooting
+
+### Container Keeps Restarting (Kubernetes/Docker)
+
+If your container is in a restart loop:
+
+1. **Check logs**:
+   ```bash
+   # Docker
+   docker logs fucktvconfig
+   
+   # Kubernetes
+   kubectl logs <pod-name>
+   ```
+
+2. **Verify environment variables**:
+   - Ensure `KEY` is set (required)
+   - Ensure `APIURL` and `APIKEY` are set (required for AI conversion)
+   
+3. **Common causes**:
+   - Missing required environment variables
+   - Invalid API credentials
+   - Port 8787 already in use
+
+### Container Starts But Can't Access
+
+1. **Check if container is running**:
+   ```bash
+   docker ps | grep fucktvconfig
+   ```
+
+2. **Verify port mapping**:
+   - Ensure port 8787 is exposed: `-p 8787:8787`
+   - Check if port is already in use: `netstat -an | grep 8787`
+
+3. **Test connectivity**:
+   ```bash
+   curl http://localhost:8787
+   ```
+
+### AI Conversion Fails
+
+1. **Verify API configuration**:
+   - Check `APIURL` is correct (e.g., `https://api.openai.com/v1/chat/completions`)
+   - Verify `APIKEY` is valid
+   - Ensure `MODEL` name is correct (default: `gpt-4o-mini`)
+
+2. **Check logs for API errors**:
+   ```bash
+   docker logs fucktvconfig | grep -i error
+   ```
+
+### Authentication Issues
+
+1. **Can't login**:
+   - Verify `KEY` environment variable matches your password
+   - JWT tokens expire after 3 days - try logging in again
+
+2. **"Unauthorized" errors**:
+   - Clear browser cache and cookies
+   - Check browser console for errors (F12)
+
+### Port Already in Use
+
+If port 8787 is already occupied:
+
+```bash
+# Option 1: Use a different port
+docker run -p 8788:8787 ...
+
+# Option 2: Stop the conflicting service
+# Find what's using the port
+netstat -ano | findstr :8787  # Windows
+lsof -i :8787                  # Linux/Mac
+```
+
+### Getting Help
+
+If issues persist:
+
+1. Check the [Docker Debug Guide](./DOCKER_DEBUG.md)
+2. Review container logs for specific error messages
+3. Ensure all required environment variables are set
+4. Try pulling the latest image: `docker pull axuitomo/fucktvconfig:latest`
 
 ## Resources
 

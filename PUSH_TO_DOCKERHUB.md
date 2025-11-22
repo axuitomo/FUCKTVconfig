@@ -31,7 +31,7 @@ docker login
 ### 步骤 1: 构建镜像
 
 ```powershell
-cd c:\CODE\my-json-converter
+cd c:\CODE\fucktvconfig
 
 # 构建镜像并打标签
 docker build -t axuitomo/fucktvconfig:latest .
@@ -63,7 +63,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ### 步骤 2: 运行脚本
 
 ```powershell
-cd c:\CODE\my-json-converter
+cd c:\CODE\fucktvconfig
 
 # 运行构建和推送脚本
 .\build-and-push.ps1 -Username "axuitomo" -ImageName "fucktvconfig" -Version "latest"
@@ -111,7 +111,7 @@ GitHub Actions 会自动构建并推送镜像到 `axuitomo/fucktvconfig`。
 
 ```powershell
 # 1. 进入项目目录
-cd c:\CODE\my-json-converter
+cd c:\CODE\fucktvconfig
 
 # 2. 登录 Docker Hub
 docker login
@@ -152,11 +152,10 @@ docker pull axuitomo/fucktvconfig:latest
 docker run -d \
   -p 8787:8787 \
   -e KEY=your-admin-password \
-  -e TOKEN=your-guest-password \
   -e APIURL=https://api.openai.com/v1/chat/completions \
   -e APIKEY=your-api-key \
   -e MODEL=gpt-4o-mini \
-  --name json-converter \
+  --name fucktvconfig \
   axuitomo/fucktvconfig:latest
 ```
 
@@ -168,14 +167,13 @@ docker run -d \
 version: '3.8'
 
 services:
-  json-converter:
+  fucktvconfig:
     image: axuitomo/fucktvconfig:latest
-    container_name: json-converter
+    container_name: fucktvconfig
     ports:
       - "8787:8787"
     environment:
       - KEY=${KEY}
-      - TOKEN=${TOKEN}
       - APIURL=${APIURL}
       - APIKEY=${APIKEY}
       - MODEL=${MODEL:-gpt-4o-mini}
@@ -235,7 +233,7 @@ docker login
 安装 Docker 后，执行以下命令即可完成推送：
 
 ```powershell
-cd c:\CODE\my-json-converter
+cd c:\CODE\fucktvconfig
 docker login
 docker build -t axuitomo/fucktvconfig:latest .
 docker push axuitomo/fucktvconfig:latest

@@ -1678,18 +1678,13 @@ var src_default = {
 async function handleAuth(request, env, corsHeaders) {
   try {
     const { password } = await request.json();
-    let role = null;
-    if (password === env.KEY) {
-      role = "admin";
-    } else if (password === env.TOKEN) {
-      role = "guest";
-    }
-    if (!role) {
+    if (password !== env.KEY) {
       return new Response(JSON.stringify({ error: "Invalid password" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
+    const role = "admin";
     const secret = new TextEncoder().encode(env.KEY);
     const token = await new SignJWT({ role }).setProtectedHeader({ alg: "HS256" }).setExpirationTime("72h").sign(secret);
     return new Response(JSON.stringify({ token, role }), {
@@ -1726,12 +1721,6 @@ async function handleConvert(request, env, corsHeaders) {
   const user = await verifyAuth(request, env);
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
-  }
-  if (user.role !== "admin") {
-    return new Response(JSON.stringify({ error: "Guest users cannot use AI conversion" }), {
-      status: 403,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
   }
   try {
     const { sourceJson, targetFormatName } = await request.json();
@@ -1812,12 +1801,6 @@ async function handleTestAPI(request, env, corsHeaders) {
   if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-  if (user.role !== "admin") {
-    return new Response(JSON.stringify({ error: "Guest users cannot test API" }), {
-      status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }

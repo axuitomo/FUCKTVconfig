@@ -1,5 +1,5 @@
 # Multi-stage build for JSON Converter Worker
-FROM node:18-alpine AS builder
+FROM node:20-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:18-alpine
+FROM node:20-slim
 
 # Set working directory
 WORKDIR /app
@@ -41,4 +41,9 @@ EXPOSE 8787
 ENV NODE_ENV=production
 
 # Start Wrangler dev server in non-interactive mode
-CMD ["npx", "wrangler", "dev", "--ip", "0.0.0.0", "--port", "8787", "--local"]
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
+# Start using entrypoint script
+CMD ["./docker-entrypoint.sh"]
