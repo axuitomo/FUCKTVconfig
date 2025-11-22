@@ -1717,6 +1717,116 @@ async function handleStatus(request, env, corsHeaders) {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
 }
+function detectAPIType(url) {
+  const urlLower = url.toLowerCase();
+  if (urlLower.includes("anthropic.com") || urlLower.includes("claude")) {
+    return "anthropic";
+  } else if (urlLower.includes("generativelanguage.googleapis.com") || urlLower.includes("gemini")) {
+    return "gemini";
+  } else if (urlLower.includes("cohere.com") || urlLower.includes("cohere")) {
+    return "cohere";
+  }
+  return "openai";
+}
+function prepareAPIRequest(env, prompt, apiType) {
+  const model = env.MODEL || "gpt-4o-mini";
+  switch (apiType) {
+    case "anthropic":
+      return {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": env.APIKEY,
+          "anthropic-version": "2023-06-01"
+        },
+        body: {
+          model,
+          max_tokens: 4096,
+          messages: [{ role: "user", content: prompt }]
+        }
+      };
+    case "gemini":
+      return {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: {
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
+        }
+      };
+    case "cohere":
+      return {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${env.APIKEY}`
+        },
+        body: {
+          model,
+          message: prompt
+        }
+      };
+    default:
+      return {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${env.APIKEY}`
+        },
+        body: {
+          model,
+          messages: [{ role: "user", content: prompt }]
+        }
+      };
+  }
+}
+function extractContent(data, apiType) {
+  switch (apiType) {
+    case "anthropic":
+      if (data.content && data.content[0] && data.content[0].text) {
+        return data.content[0].text;
+      }
+      break;
+    case "gemini":
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      break;
+    case "cohere":
+      if (data.text) {
+        return data.text;
+      }
+      break;
+    default:
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      break;
+  }
+  throw new Error("Unexpected API response format: " + JSON.stringify(data).substring(0, 200));
+}
+async function callAI(env, prompt) {
+  if (!env.APIURL || !env.APIKEY) {
+    throw new Error("AI provider not configured. Please set APIURL and APIKEY environment variables.");
+  }
+  const apiType = env.APITYPE || detectAPIType(env.APIURL);
+  const { headers, body } = prepareAPIRequest(env, prompt, apiType);
+  const response = await fetch(env.APIURL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`AI API error (${response.status}): ${text.substring(0, 200)}...`);
+  }
+  const contentType = response.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    const text = await response.text();
+    throw new Error(`AI API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
+  }
+  const data = await response.json();
+  return extractContent(data, apiType);
+}
 async function handleConvert(request, env, corsHeaders) {
   const user = await verifyAuth(request, env);
   if (!user) {
@@ -1748,34 +1858,7 @@ ${sourceJson}
 
 Please start the conversion and return the JSON object directly.
         `;
-    if (!env.APIURL || !env.APIKEY) {
-      throw new Error("AI provider not configured. Please set APIURL and APIKEY environment variables.");
-    }
-    const response = await fetch(env.APIURL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.APIKEY}`
-      },
-      body: JSON.stringify({
-        model: env.MODEL || "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Upstream API error (${response.status}): ${text.substring(0, 200)}...`);
-    }
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      throw new Error(`Upstream API returned non-JSON (${contentType}): ${text.substring(0, 200)}...`);
-    }
-    const data = await response.json();
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Unexpected API response format: " + JSON.stringify(data));
-    }
-    let resultJsonStr = data.choices[0].message.content;
+    let resultJsonStr = await callAI(env, prompt);
     resultJsonStr = resultJsonStr.replace(/```json/g, "").replace(/```/g, "").trim();
     const resultJson = JSON.parse(resultJsonStr);
     return new Response(JSON.stringify(resultJson), {
@@ -1798,69 +1881,37 @@ async function handleTestAPI(request, env, corsHeaders) {
   }
   try {
     const testPrompt = 'Say "API test successful" in JSON format with a field called "message".';
-    if (env.APIURL) {
-      const response = await fetch(env.APIURL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${env.APIKEY}`
-        },
-        body: JSON.stringify({
-          model: env.MODEL,
-          messages: [{ role: "user", content: testPrompt }]
-        })
+    if (!env.APIURL || !env.APIKEY) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "AI provider not configured",
+        details: "Please set APIURL and APIKEY environment variables."
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-      if (!response.ok) {
-        const text = await response.text();
-        return new Response(JSON.stringify({
-          success: false,
-          error: `API returned status ${response.status}`,
-          details: text.substring(0, 500)
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        return new Response(JSON.stringify({
-          success: false,
-          error: `API returned non-JSON content type: ${contentType}`,
-          details: text.substring(0, 500)
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
-      const data = await response.json();
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "Unexpected API response format",
-          details: JSON.stringify(data)
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        });
-      }
+    }
+    try {
+      const apiType = env.APITYPE || detectAPIType(env.APIURL);
+      const responseText = await callAI(env, testPrompt);
       return new Response(JSON.stringify({
         success: true,
         message: "API test successful",
-        response: data.choices[0].message.content,
+        response: responseText,
         config: {
           url: env.APIURL,
-          model: env.MODEL,
+          model: env.MODEL || "gpt-4o-mini",
+          apiType,
           hasApiKey: !!env.APIKEY
         }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
-    } else {
+    } catch (apiError) {
       return new Response(JSON.stringify({
         success: false,
-        error: "AI provider not configured",
-        details: "Please set APIURL and APIKEY environment variables."
+        error: apiError.message,
+        details: apiError.stack
       }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" }
